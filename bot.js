@@ -10,6 +10,7 @@ Simple rules apply:
 	- If make profit, donate some bits. This way I can try to increase the bot's power.
 	- Don't claim script as if it where your own.
 	- If you improve script, make a commit to the Github.
+	- I can NOT be held liable for any problems that occur, so no refunds on loss of bits :) (though you can open a ticket!)
 
 Algorithm:
 	- Onwin: return to baseBet
