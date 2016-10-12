@@ -1,7 +1,6 @@
 /*
-FinlayDaG33k's Script v2016.10.07.20.41
+FinlayDaG33k's Script v2016.10.12.18.28
 Do not sell script! (it's against my rules :C) 
-Build upon Procon's Script.
  
 Simple rules apply:
 	- Do not sell my script, sharing it is okay though.
@@ -10,122 +9,84 @@ Simple rules apply:
 	- If make profit, donate some bits. This way I can try to increase the bot's power.
 	- Don't claim script as if it where your own.
 	- If you improve script, make a commit to the Github.
-	- I can NOT be held liable for any problems that occur, so no refunds on loss of bits :) (though you can open a ticket!)
-
-Algorithm:
-	- Onwin: return to baseBet
-	- Onloss:
-		- Wait a few games
-		- Multiply last bet by 4, make multiplier so that bet does not have to be very high.
-		- Hope we win again
 */
 
 // User Settings
-var baseBet = 1;
-var baseMultiplier = 1.10;
-var variableBase = false; // Enable variable mode (very experimental)
-var maximumBet = 1000000; // Maximum bet the bot will do (in bits).
-var streakSecurity = 4; // Number of loss-streak you wanna be safe for. (Reccommended is 4)
-var maxBalance = 10000; //The bot will stop when your total balance is higher that this value (in bits).
+var baseBet = 1;    // Set the base bet here. (integer)
+var basecashOut = 1.05; // Set the base cashout multiplier here. (float)
 
-// Bot Variables - Do not touch! (seriously, dont, it might break the poor bot :C)
-var baseSatoshi = baseBet * 100; // Calculated
-var currentBet = baseSatoshi;
-var currentMultiplier = baseMultiplier;
-var currentGameID = -1;
-var firstGame = true;
-var lossStreak = 0;
-var coolingDown = false;
+// Change stuff below at risk of breaking bot :D 
+var skip1 = 6; // Skip games after first loss
+var skip2 = 0; // Skip games after second loss
+var skip3 = 6; // Skip games after third loss
+var skip4 = 0; // Skip games after fourth loss
+var skip5 = 6; // Skip games after fifth loss
+var skip6 = 2; // Skip games after every next loss
+var bet = baseBet * 100;
+var currentBet = bet;
 var startBalance = engine.getBalance();
+var currentBalance = startBalance;
+var losses = 0;
+var skip = 0;
+var lostGames = 0;
+var waitXgames = 0;
+var CO = 0;
 
-engine.on('game_starting', function(info) {
-    console.log('[Bot] Game Starting!');
-});
 
-engine.on('game_started', function(data) {
-    console.log('[Bot] Game Started', data);
-});
+engine.on('game_starting', function(info){
+    if(currentBet && engine.lastGamePlay() == 'LOST'){
+        lostGames++;
+        currentBalance = engine.getBalance();
+        losses = startBalance - currentBalance;
+		
+        currentBet *= 2;
+        cashOut = (losses / currentBet) + 1.01;
 
-engine.on('game_crash', function(data) {
-    console.log('[Bot] Game crashed at ', data.game_crash);
-});
+        if (lostGames >= 3) {
 
-engine.on('game_starting', function(info) {
-    console.log('====== New Game ======');
-    console.log('[Bot] Game #' + info.game_id);
-    currentGameID = info.game_id;
+            waitXgames = 0;
 
-    if (coolingDown) {     
-		if (lossStreak == 0) {
-			coolingDown = false;
-		}else {
-			lossStreak--;
-			console.log('[Bot] Cooling down! Games remaining: ' + lossStreak);
-			return;
-		}
+            if(lostGames == 3){ // If we lost 3 games in a row.
+                skip = skip1;
+            }
+            if(lostGames == 4){ // If we lost 4 games in a row.
+                skip = skip2;
+            }
+            if(lostGames == 5){ // If we lost 5 games in a row.
+                skip = skip3;
+            }
+            if(lostGames == 6){ // If we lost 6 games in a row.
+                skip = skip4;
+            }
+            if(lostGames == 7){ // If we lost 7 games in a row.
+                skip = skip5;
+            }
+            if(lostGames >= 8){ // If we lost 8 games in a row.
+                skip = skip6;
+            }
+        }
+    }else{
+        currentBalance = engine.getBalance();
+        if (currentBalance > startBalance) {
+
+            currentBet = bet;
+            cashOut = basecashOut;
+
+            startBalance = engine.getBalance();
+            lostGames = 0;
+            skip = 0;
+        }
     }
-	
-    if (engine.lastGamePlay() == 'LOST' && !firstGame) { // If last game loss:
-		lossStreak++;
-		var totalLosses = 0; // Total satoshi lost.
-		var lastLoss = currentBet; // Store our last bet.
-		while (lastLoss >= baseSatoshi) { // Until we get down to base bet, add the previous losses.
-			totalLosses += lastLoss;
-			lastLoss /= 4;
-		}
-		
-	
-		if (lossStreak > streakSecurity) { // If we're on a loss streak, wait a few more games!
-			coolingDown = true;
-			return;
-		}else{
-			coolingDown = true;
-		}
-		
-		currentBet *= 4; // Then multiply base bet by 4!
-		currentMultiplier = 1 + (totalLosses / currentBet);
-    }else { // Otherwise if win or first game:
-		lossStreak = 0; // If it was a win, we reset the lossStreak.
-		if (variableBase) { // If variable bet enabled.
-			// Variable mode resists (currently) 1 loss, by making sure you have enough to cover the base and the 4x base bet.
-			var divider = 100;
-			for (i = 0; i < streakSecurity; i++) {
-				divider += (100 * Math.pow(4, (i + 1)));
-			}
-				
-			newBaseBet = Math.min(Math.max(1, Math.floor(engine.getBalance() / divider)), maximumBet * 100); // In bits
-			newBaseSatoshi = newBaseBet * 100;
-
-			if ((newBaseBet != baseBet) || (newBaseBet == 1)) {
-				console.log('[Bot] Variable mode has changed base bet to: ' + newBaseBet + ' bits');
-				baseBet = newBaseBet;
-				baseSatoshi = newBaseSatoshi;
-			}
-		}
-		// Update bet.
-		currentBet = baseSatoshi; // in Satoshi
-		currentMultiplier = baseMultiplier;
+    if (waitXgames >= skip) {
+        console.log('Placing bet of', Math.floor(currentBet / 100), 'at', Math.round(cashOut * 100) / 100, 'Cash out.');
+        engine.placeBet(Math.floor(currentBet / 100) * 100, Math.floor(cashOut * 100), false);
     }
 
-    // Message and set first game to false to be sure.
-    console.log('[Bot] Betting ' + (currentBet / 100) + ' bits, cashing out at ' + currentMultiplier + 'x');
-    firstGame = false;
-
-    if (currentBet <= engine.getBalance()){ // Ensure we have enough to bet
-		if (currentBet > (maximumBet * 100)) { // Ensure you only bet the maximum.
-			console.warn('[Warn] Bet size exceeds maximum bet, lowering bet to ' + (maximumBet * 100) + ' bits');
-			currentBet = maximumBet;
-		}
-		engine.placeBet(currentBet, Math.round(currentMultiplier * 100), false); // Place the bet
-    }else{ // Otherwise insufficent funds...
-		if (engine.getBalance() < 100) {
-			console.error('[Bot] Insufficent funds to do anything... stopping');
-			engine.stop();
-		}else{
-			console.warn('[Bot] Insufficent funds to bet ' + (currentBet / 100) + ' bits.');
-			console.warn('[Bot] Resetting to 1 bit basebet');
-			baseBet = 1;
-			baseSatoshi = 100;
-		}
+});
+engine.on('game_crash', function(data){
+    if(data.game_crash / 100 >= CO){
+        waitXgames++;
+    }else{
+        waitXgames++;
     }
 });
