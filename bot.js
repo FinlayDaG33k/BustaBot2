@@ -12,7 +12,7 @@ Simple rules apply:
 */
 
 // User Settings
-var baseBet = 5;    // Set the base bet here. (integer)
+var baseBet = 1;    // Set the base bet here. (integer)
 var basecashOut = 1.05; // Set the base cashout multiplier here. (float)
 
 // Change stuff below at risk of breaking bot :D 
