@@ -12,10 +12,11 @@ Simple rules apply:
 */
 
 // User Settings
-var baseBet = 1;    // Set the base bet here. (integer)
+var baseBet = 5;    // Set the base bet here. (integer)
 var basecashOut = 1.05; // Set the base cashout multiplier here. (float)
 
 // Change stuff below at risk of breaking bot :D 
+var cashOut = basecashOut;
 var skip1 = 6; // Skip games after first loss
 var skip2 = 0; // Skip games after second loss
 var skip3 = 6; // Skip games after third loss
@@ -24,6 +25,7 @@ var skip5 = 6; // Skip games after fifth loss
 var skip6 = 2; // Skip games after every next loss
 var bet = baseBet * 100;
 var currentBet = bet;
+var initBalance = engine.getBalance();
 var startBalance = engine.getBalance();
 var currentBalance = startBalance;
 var losses = 0;
@@ -31,7 +33,6 @@ var skip = 0;
 var lostGames = 0;
 var waitXgames = 0;
 var CO = 0;
-
 
 engine.on('game_starting', function(info){
     if(currentBet && engine.lastGamePlay() == 'LOST'){
@@ -78,7 +79,7 @@ engine.on('game_starting', function(info){
         }
     }
     if (waitXgames >= skip) {
-        console.log('Placing bet of', Math.floor(currentBet / 100), 'at', Math.round(cashOut * 100) / 100, 'Cash out.');
+        console.log('Placing bet of', Math.floor(currentBet / 100), 'at', Math.round(cashOut * 100) / 100, 'Cash out. (Profit: ', ((engine.getBalance() - initBalance) / 100), ' Bits)');
         engine.placeBet(Math.floor(currentBet / 100) * 100, Math.floor(cashOut * 100), false);
     }
 
